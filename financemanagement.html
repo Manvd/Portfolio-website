@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudgetBuddy - Personal Finance Dashboard</title>
+    <!-- Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+         :root {
+            --sidebar-bg: #222;
+            --main-bg: #f8f8f4;
+            --card-bg: #ffffff;
+            --primary: #7c3aed;
+            /* Purple */
+            --secondary: #a78bfa;
+            /* Lighter Purple */
+            --income: #10b981;
+            /* Green */
+            --expense: #ef4444;
+            /* Red */
+            --saving: #f59e0b;
+            /* Amber */
+            --transfer-out: #f472b6;
+            /* Pink */
+            --transfer-in: #22d3ee;
+            /* Cyan */
+            --text-dark: #1e1e1e;
+            --text-light: #f8f8f4;
+            --text-muted: #64748b;
+            /* Grayish text */
+            --border-color: #e2e8f0;
+            /* Light border */
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        /* --- Base & Reset --- */
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: var(--main-bg);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        button {
+            cursor: pointer;
+        }
+        
+        canvas {
+            max-width: 100%;
+        }
+        /* Prevent canvas overflow */
+        /* --- Login Page Styles --- */
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--main-bg);
+        }
+        
+        .login-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+            margin: 1rem;
+        }
+        
+        .login-card h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        
+        .login-btn:hover {
+            background-color: #6d28d9;
+        }
+        
+        #loginError {
+            color: var(--expense);
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+        /* --- Dashboard Container --- */
+        
+        .dashboard-container {
+            display: none;
+            min-height: 100vh;
+            /* Set to flex by JS */
+        }
+        /* --- Sidebar Styles --- */
+        
+        .sidebar {
+            background-color: var(--sidebar-bg);
+            color: var(--text-light);
+            width: 250px;
+            padding: 1.5rem;
+            position: fixed;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        
+        .sidebar-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--text-light);
+            text-align: center;
+        }
+        
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            color: #a0aec0;
+        }
+        
+        .nav-item svg {
+            stroke-width: 1.5;
+            flex-shrink: 0;
+        }
+        /* Prevent icon shrinking */
+        
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-light);
+        }
+        
+        .nav-item.active {
+            background-color: var(--primary);
+            color: var(--text-light);
+            font-weight: 600;
+        }
+        
+        .nav-item.active svg {
+            stroke: var(--text-light);
+        }
+        
+        .nav-item .badge {
+            margin-left: auto;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 999px;
+            padding: 0.15rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .logout-btn {
+            color: #f87171 !important;
+        }
+        
+        .logout-btn:hover {
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+        
+        .logout-btn svg {
+            stroke: #f87171;
+        }
+        /* --- Main Content Styles --- */
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+            width: calc(100% - 250px);
+            transition: margin-left 0.3s ease, width 0.3s ease;
+            background-color: var(--main-bg);
+            /* Ensure background color */
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .header h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-dark);
+            font-size: 1.75rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            margin-top: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        /* --- Content Section Switching --- */
+        
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        /* --- Shared Card Style --- */
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        /* --- Dashboard Section Styles --- */
+        
+        #dashboardSection .dashboard-layout {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        #dashboardSection .main-section {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        #dashboardSection .right-sidebar {
+            width: 300px;
+            flex-shrink: 0;
+        }
+        
+        #dashboardSection .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        #dashboardSection .card.income-card {
+            border-left: 5px solid var(--income);
+        }
+        
+        #dashboardSection .card.expense-card {
+            border-left: 5px solid var(--expense);
+        }
+        
+        #dashboardSection .card.saving-card {
+            border-left: 5px solid var(--saving);
+        }
+        
+        #dashboardSection .card h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        #dashboardSection .card .amount {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+        
+        #dashboardSection .card .change {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        #dashboardSection .income-change {
+            color: var(--income);
+        }
+        
+        #dashboardSection .expense-change {
+            color: var(--expense);
+        }
+        
+        #dashboardSection .saving-change {
+            color: var(--saving);
+        }
+        
+        #dashboardSection .goals-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        #dashboardSection .goal-item {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        #dashboardSection .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        #dashboardSection .goal-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+        
+        #dashboardSection .goal-percentage {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        
+        #dashboardSection .progress-bar {
+            height: 10px;
+            background-color: var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        #dashboardSection .progress-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease-in-out;
+        }
+        
+        #dashboardSection .house-progress {
+            width: 66%;
+            background-color: var(--primary);
+        }
+        
+        #dashboardSection .car-progress {
+            width: 50%;
+            background-color: var(--secondary);
+        }
+        
+        #dashboardSection .chart-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            height: 350px;
+        }
+        
+        #dashboardSection .history-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        #dashboardSection .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        #dashboardSection .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        #dashboardSection .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        #dashboardSection .history-item .title {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        
+        #dashboardSection .history-item .amount {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        #dashboardSection .history-item .amount.income {
+            color: var(--income);
+        }
+        
+        #dashboardSection .history-item .amount.expense {
+            color: var(--expense);
+        }
+        
+        #dashboardSection .balance-card {
+            background-color: var(--sidebar-bg);
+            color: var(--text-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+        
+        #dashboardSection .balance-card h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        #dashboardSection .balance-card .balance {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        #dashboardSection .balance-card .limit {
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.7;
+        }
+        
+        #dashboardSection .balance-card .growth {
+            color: var(--income);
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+        
+        #dashboardSection .add-card-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        #dashboardSection .add-card-btn:hover {
+            background-color: #6d28d9;
+        }
+        
+        #dashboardSection .verify-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        
+        #dashboardSection .verify-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        #dashboardSection .verify-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        
+        #dashboardSection .verify-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        #dashboardSection .verify-btn:hover {
+            background-color: #6d28d9;
+        }
+        /* --- Wallet Section Styles --- */
+        
+        #walletSection .wallet-summary {
+            background-color: var(--primary);
+            color: var(--text-light);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+        
+        #walletSection .wallet-summary h3 {
+            opacity: 0.8;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        #walletSection .wallet-summary .total-balance {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        #walletSection .cards-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        #walletSection .wallet-card {
+            /* Reuses .card */
+            border-left: 5px solid var(--secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        #walletSection .wallet-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #walletSection .wallet-card-header .card-type {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        #walletSection .wallet-card-header .card-status {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 99px;
+            background-color: var(--income);
+            color: white;
+        }
+        
+        #walletSection .wallet-card-details .card-number {
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+            font-family: monospace;
+        }
+        /* Monospace for numbers */
+        
+        #walletSection .wallet-card-details .card-info {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        #walletSection .wallet-card-balance .balance-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        
+        #walletSection .wallet-card-balance .balance-amount {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+        
+        #walletSection .add-new-card-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background-color: var(--card-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+            min-height: 150px;
+        }
+        
+        #walletSection .add-new-card-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background-color: rgba(124, 58, 237, 0.05);
+        }
+        /* --- Transfers Section Styles --- */
+        
+        #transfersSection .transfers-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        
+        #transfersSection .transfer-form-card,
+        #transfersSection .transfer-history-card {
+            /* Reuses .card */
+            padding: 1.5rem 2rem;
+        }
+        
+        #transfersSection .transfer-form-card .section-title,
+        /* Remove margin/border for titles inside cards */
+        
+        #transfersSection .transfer-history-card .section-title {
+            margin-top: 0;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        #transfersSection .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        #transfersSection .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        #transfersSection .form-group input,
+        #transfersSection .form-group select,
+        #transfersSection .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: #fff;
+            /* Ensure background */
+        }
+        
+        #transfersSection .form-group input:focus,
+        #transfersSection .form-group select:focus,
+        #transfersSection .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+        }
+        
+        #transfersSection .transfer-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        #transfersSection .transfer-btn:hover {
+            background-color: #6d28d9;
+        }
+        
+        #transfersSection .transfer-history-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            padding-right: 0.5rem;
+        }
+        
+        #transfersSection .transfer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        #transfersSection .transfer-item:last-child {
+            border-bottom: none;
+        }
+        
+        #transfersSection .transfer-details {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        #transfersSection .transfer-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        #transfersSection .transfer-icon.out {
+            background-color: rgba(244, 114, 182, 0.1);
+            color: var(--transfer-out);
+        }
+        
+        #transfersSection .transfer-icon.in {
+            background-color: rgba(34, 211, 238, 0.1);
+            color: var(--transfer-in);
+        }
+        
+        #transfersSection .transfer-info .name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        #transfersSection .transfer-info .date {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        #transfersSection .transfer-amount {
+            font-weight: 600;
+            text-align: right;
+        }
+        
+        #transfersSection .transfer-amount.out {
+            color: var(--transfer-out);
+        }
+        
+        #transfersSection .transfer-amount.in {
+            color: var(--transfer-in);
+        }
+        /* --- Analytics Section Styles --- */
+        
+        #analyticsSection .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: auto auto;
+            gap: 1.5rem;
+        }
+        
+        #analyticsSection .chart-card {
+            /* Reuses .card */
+            height: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Flex for title/canvas */
+        
+        #analyticsSection .chart-card h4 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        #analyticsSection .chart-card canvas {
+            flex-grow: 1;
+            min-height: 0;
+        }
+        /* Allow canvas to shrink/grow */
+        
+        #analyticsSection .chart-card .placeholder-text {
+            text-align: center;
+            color: var(--text-muted);
+            margin: auto;
+        }
+        /* Center placeholder */
+        
+        #analyticsSection .income-expense-chart-card {
+            grid-column: 1 / -1;
+            height: 400px;
+        }
+        
+        #analyticsSection .category-spending-card {
+            grid-column: 1 / -1;
+            /* Reuses .card */
+        }
+        
+        #analyticsSection .category-spending-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        #analyticsSection .category-list {
+            margin-top: 1rem;
+        }
+        
+        #analyticsSection .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        #analyticsSection .category-item:last-child {
+            border-bottom: none;
+        }
+        
+        #analyticsSection .category-name {
+            font-weight: 500;
+        }
+        
+        #analyticsSection .category-amount {
+            font-weight: 600;
+            color: var(--expense);
+        }
+        /* --- Settings Section Styles --- */
+        
+        #settingsSection .settings-card {
+            /* Reuses .card */
+        }
+        /* --- Responsive Styles --- */
+        
+        @media (max-width: 1200px) {
+            #dashboardSection .right-sidebar {
+                width: 250px;
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+            #dashboardSection .dashboard-layout {
+                flex-direction: column;
+            }
+            #dashboardSection .right-sidebar {
+                width: 100%;
+                margin-top: 1rem;
+            }
+            #dashboardSection .cards-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+            /* Adjust min size */
+            #transfersSection .transfers-layout {
+                grid-template-columns: 1fr;
+            }
+            #analyticsSection .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+            #analyticsSection .income-expense-chart-card {
+                grid-column: 1 / 1;
+            }
+            #analyticsSection .chart-card {
+                height: 300px;
+            }
+            #analyticsSection .income-expense-chart-card {
+                height: 350px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1.5rem;
+            }
+            .header h2 {
+                font-size: 1.5rem;
+            }
+            #dashboardSection .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            #dashboardSection .history-grid {
+                grid-template-columns: 1fr;
+            }
+            /* Single column history */
+            #dashboardSection .history-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+            /* Stack history item content */
+            #walletSection .cards-list {
+                grid-template-columns: 1fr;
+            }
+            #transfersSection .transfer-form-card,
+            #transfersSection .transfer-history-card {
+                padding: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 1rem;
+            }
+            .header h2 {
+                font-size: 1.3rem;
+            }
+            .login-card {
+                padding: 1.5rem;
+            }
+            #dashboardSection .card .amount {
+                font-size: 1.5rem;
+            }
+            #dashboardSection .balance-card .balance {
+                font-size: 1.75rem;
+            }
+            #walletSection .wallet-summary .total-balance {
+                font-size: 2rem;
+            }
+            #transfersSection .transfer-details {
+                gap: 0.75rem;
+            }
+            #transfersSection .transfer-icon {
+                width: 35px;
+                height: 35px;
+            }
+            #transfersSection .transfer-info .name {
+                font-size: 0.9rem;
+            }
+            #analyticsSection .category-spending-card {
+                padding: 1rem;
+            }
+            #analyticsSection .chart-card {
+                height: 280px;
+            }
+            #analyticsSection .income-expense-chart-card {
+                height: 320px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Page -->
+    <div class="login-container" id="loginPage">
+        <div class="login-card">
+            <h1>BudgetBuddy</h1>
+            <div class="form-group"> <label for="email">Email</label> <input type="email" id="email" placeholder="demo@budgetbuddy.com"> </div>
+            <div class="form-group"> <label for="password">Password</label> <input type="password" id="password" placeholder="password"> </div>
+            <button class="login-btn" id="loginBtn">Login</button>
+            <p id="loginError">Invalid credentials. Please try again.</p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard-container" id="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">BudgetBuddy</div>
+            <nav class="nav-menu">
+                <div class="nav-item active" data-target="dashboardSection">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>                    Dashboard
+                </div>
+                <div class="nav-item" data-target="analyticsSection">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>                    Analytics
+                </div>
+                <div class="nav-item" data-target="walletSection">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>                    Wallet
+                    <span class="badge">2</span>
+                </div>
+                <div class="nav-item" data-target="transfersSection">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>                    Transfers
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="nav-item" data-target="settingsSection">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>                    Settings
+                </div>
+                <div class="nav-item logout-btn" id="logoutBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>                    Log out
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <div class="header">
+                <h2 id="sectionHeader">Dashboard</h2>
+                <button class="mobile-menu-btn" id="menuBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- === Dashboard Section === -->
+            <div class="content-section active" id="dashboardSection">
+                <div class="dashboard-layout">
+                    <div class="main-section">
+                        <!-- Summary Cards -->
+                        <div class="cards-grid">
+                            <div class="card income-card">
+                                <h3>Total Income</h3>
+                                <div class="amount">$950.59</div>
+                                <div class="change income-change">+7.8%</div>
+                            </div>
+                            <div class="card expense-card">
+                                <h3>Total Expense</h3>
+                                <div class="amount">$240.22</div>
+                                <div class="change expense-change">+2.4%</div>
+                            </div>
+                            <div class="card saving-card">
+                                <h3>Total Saving</h3>
+                                <div class="amount">$471.12</div>
+                                <div class="change saving-change">-2.4%</div>
+                            </div>
+                        </div>
+                        <!-- Goals -->
+                        <h3 class="section-title">Goals Progress</h3>
+                        <div class="goals-container">
+                            <div class="goal-item">
+                                <div class="goal-header">
+                                    <div class="goal-title">Save for New House</div>
+                                    <div class="goal-percentage">66%</div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill house-progress"></div>
+                                </div>
+                            </div>
+                            <div class="goal-item">
+                                <div class="goal-header">
+                                    <div class="goal-title">Buy Dream Car</div>
+                                    <div class="goal-percentage">50%</div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill car-progress"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Activity Chart -->
+                        <h3 class="section-title">Activity Graph (6 Months)</h3>
+                        <div class="chart-container"> <canvas id="activityChart"></canvas> </div>
+                        <!-- History -->
+                        <h3 class="section-title">Recent Transactions</h3>
+                        <div class="history-container">
+                            <div class="history-grid">
+                                <div class="history-item"><span class="title">House Rent</span><span class="amount expense">-$1,200.20</span></div>
+                                <div class="history-item"><span class="title">Salary Deposit</span><span class="amount income">+$5,089.89</span></div>
+                                <div class="history-item"><span class="title">Grocery Store</span><span class="amount expense">-$155.70</span></div>
+                                <div class="history-item"><span class="title">Freelance Payment</span><span class="amount income">+$921.42</span></div>
+                                <div class="history-item"><span class="title">Utilities Bill</span><span class="amount expense">-$112.35</span></div>
+                                <div class="history-item"><span class="title">Coffee Shop</span><span class="amount expense">-$8.50</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right Sidebar (Dashboard Specific) -->
+                    <aside class="right-sidebar">
+                        <div class="balance-card">
+                            <h3>Overall Balance</h3>
+                            <div class="balance">$5,750.20</div>
+                            <div class="limit">Across 2 Accounts</div>
+                            <div class="growth">+12.8% This Month</div> <button class="add-card-btn" id="switchToWalletBtn">Manage Accounts</button> </div>
+                        <div class="verify-card">
+                            <h4>Verify Your Account</h4>
+                            <p>Complete verification for full features & security.</p> <button class="verify-btn">Verify Now</button> </div>
+                    </aside>
+                </div>
+            </div>
+
+            <!-- === Wallet Section === -->
+            <div class="content-section" id="walletSection">
+                <div class="wallet-summary">
+                    <h3>Total Wallet Balance</h3>
+                    <div class="total-balance">$7,850.90</div>
+                </div>
+                <h3 class="section-title">My Cards & Accounts</h3>
+                <div class="cards-list">
+                    <div class="wallet-card card">
+                        <div class="wallet-card-header"> <span class="card-type"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg> Checking </span>                            <span class="card-status">Active</span> </div>
+                        <div class="wallet-card-details">
+                            <div class="card-number">**** **** **** 5890</div>
+                            <div class="card-info">Main Bank | Expires 12/26</div>
+                        </div>
+                        <div class="wallet-card-balance">
+                            <div class="balance-label">Current Balance</div>
+                            <div class="balance-amount">$5,750.20</div>
+                        </div>
+                    </div>
+                    <div class="wallet-card card" style="border-left-color: var(--expense)">
+                        <div class="wallet-card-header"> <span class="card-type"> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg> Credit Card </span>                            <span class="card-status">Active</span> </div>
+                        <div class="wallet-card-details">
+                            <div class="card-number">**** **** **** 1234</div>
+                            <div class="card-info">Credit Union | Expires 08/25</div>
+                        </div>
+                        <div class="wallet-card-balance">
+                            <div class="balance-label">Available Credit</div>
+                            <div class="balance-amount">$2,100.70</div>
+                        </div>
+                    </div>
+                    <button class="add-new-card-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                         Add New Card or Account
+                     </button>
+                </div>
+            </div>
+
+            <!-- === Transfers Section === -->
+            <div class="content-section" id="transfersSection">
+                <div class="transfers-layout">
+                    <div class="transfer-form-card card">
+                        <h3 class="section-title">Make a Transfer</h3>
+                        <div class="form-group"> <label for="transferTo">Recipient</label> <input type="text" id="transferTo" placeholder="Name, email, or account number"> </div>
+                        <div class="form-group"> <label for="transferAmount">Amount ($)</label> <input type="number" id="transferAmount" placeholder="0.00" step="0.01"> </div>
+                        <div class="form-group"> <label for="transferFrom">From Account</label> <select id="transferFrom"> <option value="checking">Checking (**** 5890) - $5,750.20</option> <option value="savings">Savings (**** 6789) - $12,300.00</option> </select> </div>
+                        <div class="form-group"> <label for="transferNote">Note (Optional)</label> <textarea id="transferNote" rows="3" placeholder="E.g., For dinner last night"></textarea> </div>
+                        <button class="transfer-btn">Send Money</button>
+                    </div>
+                    <div class="transfer-history-card card">
+                        <h3 class="section-title">Recent Transfers</h3>
+                        <div class="transfer-history-list">
+                            <div class="transfer-item">
+                                <div class="transfer-details">
+                                    <div class="transfer-icon out"> <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>                                        </div>
+                                    <div class="transfer-info">
+                                        <div class="name">Sent to Jane Smith</div>
+                                        <div class="date">July 20, 2023</div>
+                                    </div>
+                                </div>
+                                <div class="transfer-amount out">-$50.00</div>
+                            </div>
+                            <div class="transfer-item">
+                                <div class="transfer-details">
+                                    <div class="transfer-icon in"> <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>                                        </div>
+                                    <div class="transfer-info">
+                                        <div class="name">Received from ACME Corp</div>
+                                        <div class="date">July 18, 2023</div>
+                                    </div>
+                                </div>
+                                <div class="transfer-amount in">+$1,500.00</div>
+                            </div>
+                            <div class="transfer-item">
+                                <div class="transfer-details">
+                                    <div class="transfer-icon out"> <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>                                        </div>
+                                    <div class="transfer-info">
+                                        <div class="name">Paid Rent - July</div>
+                                        <div class="date">July 1, 2023</div>
+                                    </div>
+                                </div>
+                                <div class="transfer-amount out">-$1200.20</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === Analytics Section === -->
+            <div class="content-section" id="analyticsSection">
+                <h3 class="section-title" style="border:none; margin-bottom: 1.5rem;">Financial Analytics</h3>
+                <div class="analytics-grid">
+                    <div class="chart-card income-expense-chart-card card">
+                        <h4>Income vs. Expense (YTD)</h4>
+                        <canvas id="incomeExpenseChart"></canvas>
+                    </div>
+                    <div class="chart-card card">
+                        <h4>Spending by Category (Month)</h4>
+                        <canvas id="spendingPieChart"></canvas>
+                    </div>
+                    <div class="chart-card card">
+                        <h4>Savings Rate (Month)</h4>
+                        <canvas id="savingsRateChart"></canvas>
+                        <!-- Canvas is needed -->
+                        <p class="placeholder-text">Savings chart coming soon!</p>
+                        <!-- Text for placeholder -->
+                    </div>
+                    <div class="category-spending-card card">
+                        <h4>Detailed Spending (This Month)</h4>
+                        <div class="category-list">
+                            <div class="category-item"> <span class="category-name">Groceries</span> <span class="category-amount">-$255.60</span> </div>
+                            <div class="category-item"> <span class="category-name">Rent/Mortgage</span> <span class="category-amount">-$1200.20</span> </div>
+                            <div class="category-item"> <span class="category-name">Utilities</span> <span class="category-amount">-$112.35</span> </div>
+                            <div class="category-item"> <span class="category-name">Dining Out</span> <span class="category-amount">-$180.75</span> </div>
+                            <div class="category-item"> <span class="category-name">Transportation</span> <span class="category-amount">-$95.00</span> </div>
+                            <div class="category-item"> <span class="category-name">Shopping</span> <span class="category-amount">-$310.00</span> </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === Settings Section === -->
+            <div class="content-section" id="settingsSection">
+                <h3 class="section-title">Settings</h3>
+                <div class="settings-card card">
+                    <h4>Account Settings</h4>
+                    <p>User profile information, password change, notification preferences, linked accounts, etc.</p>
+                    <br>
+                    <h4>Security</h4>
+                    <p>Two-factor authentication setup, session management.</p>
+                    <br>
+                    <h4>Appearance</h4>
+                    <p>Theme options (Light/Dark mode toggle - *feature not implemented yet*).</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const loginPage = document.getElementById('loginPage');
+        const dashboard = document.getElementById('dashboard');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginError = document.getElementById('loginError');
+        const sectionHeader = document.getElementById('sectionHeader');
+        const navItems = document.querySelectorAll('.nav-item');
+        const contentSections = document.querySelectorAll('.content-section');
+        const switchToWalletBtn = document.getElementById('switchToWalletBtn'); // Button on dashboard card
+
+        // --- Chart Instance Variables ---
+        let activityChartInstance = null;
+        let incomeExpenseChartInstance = null;
+        let spendingPieChartInstance = null;
+        let savingsRateChartInstance = null; // Placeholder
+
+        // --- Initial Check ---
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (isLoggedIn) {
+            showDashboard();
+        } else {
+            showLoginPage();
+        }
+
+        // --- Core Functions ---
+        function showLoginPage() {
+            loginPage.style.display = 'flex';
+            dashboard.style.display = 'none';
+            loginError.style.display = 'none';
+        }
+
+        function showDashboard() {
+            loginPage.style.display = 'none';
+            dashboard.style.display = 'flex'; // Use flex for main layout
+            // Find the default active nav item (should be Dashboard)
+            const defaultActiveItem = document.querySelector('.nav-item[data-target="dashboardSection"]');
+            if (defaultActiveItem) {
+                switchSection(defaultActiveItem); // Show default section and init its charts
+            } else {
+                console.error("Default dashboard nav item not found!");
+                // Fallback: try showing the first section if dashboard fails
+                if (contentSections.length > 0) {
+                    const firstNavItem = document.querySelector('.nav-item[data-target]');
+                    if (firstNavItem) switchSection(firstNavItem);
+                }
+            }
+        }
+
+        function switchSection(targetNavItem) {
+            if (!targetNavItem || targetNavItem.classList.contains('logout-btn') || !targetNavItem.hasAttribute('data-target')) {
+                console.log("Switch section aborted: Invalid target or logout button.");
+                return;
+            }
+
+            const targetId = targetNavItem.dataset.target;
+            const targetSection = document.getElementById(targetId);
+
+            if (!targetSection) {
+                console.error(`Switch section failed: Content section with ID "${targetId}" not found.`);
+                return;
+            }
+
+            // 1. Update Navigation Active State
+            navItems.forEach(item => {
+                if (!item.classList.contains('logout-btn')) { // Don't deactivate logout
+                    item.classList.remove('active');
+                }
+            });
+            targetNavItem.classList.add('active');
+
+            // 2. Switch Content Section Visibility
+            contentSections.forEach(section => {
+                section.classList.remove('active'); // Hide all first
+            });
+            targetSection.classList.add('active'); // Show the target one
+
+            // 3. Update Header Title
+            // Extract text content, remove potential badge numbers at the end
+            let titleText = targetNavItem.textContent.replace(/\d+\s*$/, '').trim();
+            sectionHeader.textContent = titleText || 'Dashboard'; // Fallback title
+
+            // 4. Initialize Charts for the now active section
+            // This happens *after* the section is made visible (.active added)
+            initializeChartsForSection(targetId);
+
+            // 5. Close mobile sidebar
+            if (window.innerWidth <= 1024 && sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+            }
+            console.log(`Switched to section: ${targetId}`);
+        }
+
+        function initializeChartsForSection(sectionId) {
+            console.log(`Initializing charts for section: ${sectionId}`);
+            // Destroy charts from *other* sections to free resources (optional, uncomment if needed)
+            // if (sectionId !== 'dashboardSection' && activityChartInstance) { activityChartInstance.destroy(); activityChartInstance = null; console.log("Destroyed Activity Chart"); }
+            // if (sectionId !== 'analyticsSection' && incomeExpenseChartInstance) { incomeExpenseChartInstance.destroy(); incomeExpenseChartInstance = null; console.log("Destroyed Income/Expense Chart"); }
+            // if (sectionId !== 'analyticsSection' && spendingPieChartInstance) { spendingPieChartInstance.destroy(); spendingPieChartInstance = null; console.log("Destroyed Spending Pie Chart"); }
+            // if (sectionId !== 'analyticsSection' && savingsRateChartInstance) { savingsRateChartInstance.destroy(); savingsRateChartInstance = null; }
+
+
+            // Initialize charts for the *current* active section if they don't exist
+            if (sectionId === 'dashboardSection' && !activityChartInstance) {
+                initializeActivityChart();
+            } else if (sectionId === 'analyticsSection') {
+                if (!incomeExpenseChartInstance) initializeIncomeExpenseChart();
+                if (!spendingPieChartInstance) initializeSpendingPieChart();
+                // if (!savingsRateChartInstance) initializeSavingsRateChart(); // Add when implementing
+            }
+        }
+
+        // --- Chart Initialization Functions ---
+        function initializeActivityChart() {
+            const canvasElement = document.getElementById('activityChart');
+            if (!canvasElement) {
+                console.error("Activity Chart canvas not found!");
+                return;
+            }
+            const ctx = canvasElement.getContext('2d');
+            if (!ctx) {
+                console.error("Failed to get 2D context for Activity Chart!");
+                return;
+            }
+
+            // Destroy previous instance if somehow it exists but the variable is null (safety check)
+            if (Chart.getChart(canvasElement)) {
+                Chart.getChart(canvasElement).destroy();
+            }
+
+
+            const incomeGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            incomeGradient.addColorStop(0, 'rgba(16, 185, 129, 0.5)');
+            incomeGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            const expenseGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            expenseGradient.addColorStop(0, 'rgba(239, 68, 68, 0.5)');
+            expenseGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+            activityChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Income',
+                        data: [1200, 1900, 1500, 2000, 1800, 2200],
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: incomeGradient,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: 'rgb(16, 185, 129)',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: 'rgb(16, 185, 129)',
+                    }, {
+                        label: 'Expenses',
+                        data: [800, 1200, 1000, 900, 1100, 1300],
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: expenseGradient,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: 'rgb(239, 68, 68)',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: 'rgb(239, 68, 68)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                color: '#333',
+                                font: {
+                                    weight: '500'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: {
+                                weight: 'bold'
+                            },
+                            bodySpacing: 5,
+                            padding: 10,
+                            cornerRadius: 4,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', {
+                                            style: 'currency',
+                                            currency: 'USD'
+                                        }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#e2e8f0',
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                callback: function(value, index, values) {
+                                    return new Intl.NumberFormat('en-US', {
+                                        style: 'currency',
+                                        currency: 'USD',
+                                        minimumFractionDigits: 0
+                                    }).format(value);
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#64748b'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                }
+            });
+            console.log("Activity Chart Initialized");
+        }
+
+        function initializeIncomeExpenseChart() {
+            const canvasElement = document.getElementById('incomeExpenseChart');
+            if (!canvasElement) {
+                console.error("Income/Expense Chart canvas not found!");
+                return;
+            }
+            const ctx = canvasElement.getContext('2d');
+            if (!ctx) {
+                console.error("Failed to get 2D context for Income/Expense Chart!");
+                return;
+            }
+
+            if (Chart.getChart(canvasElement)) {
+                Chart.getChart(canvasElement).destroy();
+            }
+
+            incomeExpenseChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                    datasets: [{
+                        label: 'Total Income',
+                        data: [5200, 5900, 5500, 6000, 5800, 6200, 6100],
+                        borderColor: 'rgb(16, 185, 129)',
+                        tension: 0.3,
+                        fill: false
+                    }, {
+                        label: 'Total Expenses',
+                        data: [4800, 5200, 5000, 4900, 5100, 5300, 5400],
+                        borderColor: 'rgb(239, 68, 68)',
+                        tension: 0.3,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + (value / 1000) + 'k';
+                                }
+                            }
+                        },
+                        x: {}
+                    }
+                }
+            });
+            console.log("Income/Expense Chart Initialized");
+        }
+
+        function initializeSpendingPieChart() {
+            const canvasElement = document.getElementById('spendingPieChart');
+            if (!canvasElement) {
+                console.error("Spending Pie Chart canvas not found!");
+                return;
+            }
+            const ctx = canvasElement.getContext('2d');
+            if (!ctx) {
+                console.error("Failed to get 2D context for Spending Pie Chart!");
+                return;
+            }
+
+            if (Chart.getChart(canvasElement)) {
+                Chart.getChart(canvasElement).destroy();
+            }
+
+
+            spendingPieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Groceries', 'Rent', 'Utilities', 'Dining Out', 'Transport', 'Shopping'],
+                    datasets: [{
+                        label: 'Spending by Category',
+                        data: [255.60, 1200.20, 112.35, 180.75, 95.00, 310.00],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)', // Red
+                            'rgba(59, 130, 246, 0.8)', // Blue
+                            'rgba(245, 158, 11, 0.8)', // Amber
+                            'rgba(139, 92, 246, 0.8)', // Violet
+                            'rgba(22, 163, 74, 0.8)', // Green
+                            'rgba(244, 114, 182, 0.8)' // Pink
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += new Intl.NumberFormat('en-US', {
+                                            style: 'currency',
+                                            currency: 'USD'
+                                        }).format(context.parsed);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            console.log("Spending Pie Chart Initialized");
+        }
+
+        // --- Event Listeners ---
+        loginBtn.addEventListener('click', () => {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+            loginError.style.display = 'none';
+            // Simple Demo Login: Replace with actual authentication
+            if (email && password) { // Any non-empty user/pass works for demo
+                console.log("Login successful (demo)");
+                localStorage.setItem('isLoggedIn', 'true');
+                showDashboard();
+            } else {
+                console.log("Login failed: Missing credentials");
+                loginError.textContent = 'Please enter both email and password.';
+                loginError.style.display = 'block';
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            console.log("Logging out");
+            localStorage.removeItem('isLoggedIn');
+            // Destroy all chart instances
+            if (activityChartInstance) {
+                activityChartInstance.destroy();
+                activityChartInstance = null;
+                console.log("Destroyed Activity Chart");
+            }
+            if (incomeExpenseChartInstance) {
+                incomeExpenseChartInstance.destroy();
+                incomeExpenseChartInstance = null;
+                console.log("Destroyed Income/Expense Chart");
+            }
+            if (spendingPieChartInstance) {
+                spendingPieChartInstance.destroy();
+                spendingPieChartInstance = null;
+                console.log("Destroyed Spending Pie Chart");
+            }
+            // if (savingsRateChartInstance) { savingsRateChartInstance.destroy(); savingsRateChartInstance = null; } // If implemented
+
+            showLoginPage();
+            emailInput.value = '';
+            passwordInput.value = '';
+        });
+
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click from closing immediately
+            sidebar.classList.toggle('open');
+            console.log("Toggled mobile sidebar");
+        });
+
+        // Navigation Click Listener
+        navItems.forEach(item => {
+            // Exclude logout button from section switching
+            if (!item.classList.contains('logout-btn')) {
+                item.addEventListener('click', () => switchSection(item));
+            }
+        });
+
+        // Button on Dashboard card to switch to Wallet section
+        if (switchToWalletBtn) {
+            switchToWalletBtn.addEventListener('click', () => {
+                const walletNavItem = document.querySelector('.nav-item[data-target="walletSection"]');
+                if (walletNavItem) {
+                    switchSection(walletNavItem);
+                } else {
+                    console.error("Wallet nav item not found for shortcut button.");
+                }
+            });
+        }
+
+        // Close sidebar on outside click (mobile)
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 1024 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+                sidebar.classList.remove('open');
+                console.log("Closed mobile sidebar via outside click");
+            }
+        });
+    </script>
+</body>
+
+</html>
